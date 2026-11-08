@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## v0.1.0 — 2026-11-08
+
+- Fixed: approving from the form in a real browser returned 403 (Origin: null).
+- Release binaries and a multi-arch Docker image on ghcr.io.
 
 - A2H 1.0 gateway: discovery, intents (INFORM, COLLECT, AUTHORIZE, ESCALATE, RESULT), status, cancel, nonces, JWKS.
 - Channels: email (SMTP), Telegram, push (ntfy), console; retries and fallback channels.
