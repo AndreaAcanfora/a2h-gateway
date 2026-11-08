@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.1 — 2026-11-08
+
+- Listed in the official MCP Registry as `io.github.AndreaAcanfora/a2h-gateway` (`server.json`, ownership label on the image, published by the release workflow).
+- Docker image also tagged with the bare version (`0.2.1`).
+
 ## v0.2.0 — 2026-11-08
 
 - MCP server (`a2h mcp`): tools `request_approval`, `ask_human`, `notify_human`, `check_request`, `cancel_request`.

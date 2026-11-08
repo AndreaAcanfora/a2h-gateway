@@ -148,6 +148,10 @@ to ask you before acting.
 | `check_request` | Follow up on a request that is still waiting |
 | `cancel_request` | Withdraw a request that has not been answered |
 
+It is listed in the [official MCP Registry](https://registry.modelcontextprotocol.io)
+as `io.github.AndreaAcanfora/a2h-gateway`, so MCP clients that browse the
+registry can install it; or configure it by hand.
+
 Claude Code:
 
 ```sh

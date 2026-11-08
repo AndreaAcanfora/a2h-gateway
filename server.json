@@ -1,0 +1,54 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.AndreaAcanfora/a2h-gateway",
+  "title": "A2H: ask a human",
+  "description": "Ask a human before acting: approvals by email, Telegram or push, signed answers, passkeys.",
+  "repository": {
+    "url": "https://github.com/AndreaAcanfora/a2h-gateway",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/AndreaAcanfora/a2h-gateway#use-it-from-ai-agents-mcp",
+  "version": "0.2.1",
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/andreaacanfora/a2h-gateway:0.2.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "A2H_GATEWAY",
+          "description": "URL of your A2H gateway, e.g. https://a2h.example.com",
+          "isRequired": true,
+          "format": "string"
+        },
+        {
+          "name": "A2H_API_KEY",
+          "description": "API key of the gateway",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "A2H_TO",
+          "description": "Where to reach you: mailto:you@example.com, tg:<chat_id> or an ntfy topic URL",
+          "isRequired": true,
+          "format": "string"
+        },
+        {
+          "name": "A2H_PRINCIPAL",
+          "description": "Your principal ID on the gateway (optional)",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}
