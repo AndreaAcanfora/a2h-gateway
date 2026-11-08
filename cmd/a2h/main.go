@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -51,6 +52,11 @@ Run "a2h <command> -h" for flags. Gateway environment:
 `
 
 func main() {
+	// Binaries installed with "go install" carry no ldflags; their module
+	// version is in the build info.
+	if info, ok := debug.ReadBuildInfo(); ok && version == "dev" && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		version = info.Main.Version
+	}
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
