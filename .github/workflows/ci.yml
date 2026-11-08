@@ -73,10 +73,10 @@ jobs:
           A2H_CONSOLE: "1"
           A2H_DATA_DIR: /tmp/a2h-data
         run: |
-          go build -o a2h ./cmd/a2h
-          ./a2h serve &
+          go build -o dist/a2h ./cmd/a2h
+          ./dist/a2h serve &
           sleep 2
-          ./a2h conform -gateway http://localhost:8080 -key ci-key-0123456789abcdef -to console:ci
+          ./dist/a2h conform -gateway http://localhost:8080 -key ci-key-0123456789abcdef -to console:ci
 
   docker:
     runs-on: ubuntu-latest
