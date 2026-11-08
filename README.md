@@ -81,6 +81,13 @@ docker run -d -p 8080:8080 -v a2h-data:/data \
 Put it behind HTTPS: people open its links, and passkeys only work on a
 secure origin.
 
+**Telegram:** create a bot with [@BotFather](https://t.me/BotFather), then
+send your bot any message so that it may write to you. Your chat ID is in
+`https://api.telegram.org/bot<token>/getUpdates` (`message.chat.id`).
+Messages get an action button when `A2H_BASE_URL` is a public host name;
+with `localhost` the link is in the text, since Telegram refuses such
+buttons.
+
 | Variable | Meaning |
 |---|---|
 | `A2H_BASE_URL` | Public URL people open (required) |
@@ -88,7 +95,7 @@ secure origin.
 | `A2H_DATA_DIR` | Database, signing key and link secret, default `./a2h-data` |
 | `A2H_API_KEYS` | `name:key` pairs, comma-separated; agents send `X-A2H-API-Key` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` | Email channel (STARTTLS or TLS) |
-| `TELEGRAM_BOT_TOKEN` | Telegram channel; addresses are `tg:<chat_id>` |
+| `TELEGRAM_BOT_TOKEN` | Telegram channel; addresses are `tg:<chat_id>` (see below) |
 | `A2H_PUSH`, `NTFY_TOKEN` | Push channel (ntfy); addresses are topic URLs |
 | `A2H_CONSOLE` | Console channel (links in the log) |
 | `A2H_DEV` | Development mode: no auth, `http://` webhooks, console. Never expose it. |

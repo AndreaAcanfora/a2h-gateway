@@ -271,9 +271,21 @@ func (t Telegram) Deliver(ctx context.Context, n Notification) error {
 		text = n.Title + "\n\n" + text
 	}
 	payload := map[string]any{"chat_id": chat, "text": text, "disable_web_page_preview": true}
-	if n.ActionURL != "" {
+	// Telegram refuses buttons that link to localhost or bare IP addresses
+	// ("Wrong HTTP URL"); the link is in the text anyway.
+	button := n.ActionURL != "" && publicURL(n.ActionURL)
+	if button {
 		payload["reply_markup"] = map[string]any{"inline_keyboard": [][]map[string]string{{{"text": actionLabel(n.Intent), "url": n.ActionURL}}}}
 	}
+	err := t.send(ctx, payload)
+	if err != nil && button && strings.Contains(err.Error(), "button URL") {
+		delete(payload, "reply_markup")
+		err = t.send(ctx, payload)
+	}
+	return err
+}
+
+func (t Telegram) send(ctx context.Context, payload map[string]any) error {
 	b, _ := json.Marshal(payload)
 	base := t.APIBase
 	if base == "" {
@@ -285,6 +297,17 @@ func (t Telegram) Deliver(ctx context.Context, n Notification) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	return doHTTP(t.HTTP, req, "telegram")
+}
+
+// publicURL reports whether a URL has a public host name (not localhost,
+// not an IP address, with a dot).
+func publicURL(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	host := u.Hostname()
+	return host != "localhost" && net.ParseIP(host) == nil && strings.Contains(host, ".") && !strings.HasSuffix(host, ".localhost")
 }
 
 func doHTTP(client *http.Client, req *http.Request, name string) error {
