@@ -9,6 +9,8 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}"
 
 # distroless/static has CA certificates, runs as a non-root user.
 FROM gcr.io/distroless/static-debian12:nonroot
+# Proves to the MCP Registry that this image belongs to the server it lists.
+LABEL io.modelcontextprotocol.server.name="io.github.AndreaAcanfora/a2h-gateway"
 COPY --from=build /out/a2h /usr/local/bin/a2h
 WORKDIR /data
 EXPOSE 8080
