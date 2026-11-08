@@ -197,3 +197,58 @@ func TestEmailErrors(t *testing.T) {
 		t.Errorf("plain-text SMTP accepted: %v", err)
 	}
 }
+
+func TestTelegramWithoutPublicURL(t *testing.T) {
+	var payloads []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var p map[string]any
+		json.NewDecoder(r.Body).Decode(&p)
+		payloads = append(payloads, p)
+		w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+	n := note
+	n.Address = "tg:1"
+	n.ActionURL = "http://localhost:8080/i/tok"
+	if err := (Telegram{Token: "t", APIBase: srv.URL}).Deliver(context.Background(), n); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := payloads[0]["reply_markup"]; ok || !strings.Contains(payloads[0]["text"].(string), "http://localhost:8080/i/tok") {
+		t.Errorf("payload %v", payloads[0])
+	}
+	for _, u := range []string{"http://127.0.0.1/x", "http://gateway/x", "http://a2h.localhost/x"} {
+		if publicURL(u) {
+			t.Errorf("%s treated as public", u)
+		}
+	}
+	if !publicURL("https://a2h.example.com/i/x") {
+		t.Error("public URL refused")
+	}
+}
+
+func TestTelegramRetriesWithoutRejectedButton(t *testing.T) {
+	var payloads []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var p map[string]any
+		json.NewDecoder(r.Body).Decode(&p)
+		payloads = append(payloads, p)
+		if _, ok := p["reply_markup"]; ok {
+			w.WriteHeader(400)
+			w.Write([]byte(`{"ok":false,"error_code":400,"description":"Bad Request: inline keyboard button URL 'x' is invalid: Wrong HTTP URL"}`))
+			return
+		}
+		w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+	n := note
+	n.Address = "tg:1"
+	if err := (Telegram{Token: "t", APIBase: srv.URL}).Deliver(context.Background(), n); err != nil {
+		t.Fatal(err)
+	}
+	if len(payloads) != 2 {
+		t.Fatalf("%d requests", len(payloads))
+	}
+	if _, ok := payloads[1]["reply_markup"]; ok {
+		t.Error("retry still has the button")
+	}
+}
