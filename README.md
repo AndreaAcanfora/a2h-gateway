@@ -42,6 +42,8 @@ gateway and formal JSON Schemas as next steps. This project is an
 - **Webhooks** signed with HMAC (`X-A2H-Signature`), retried 10 s / 60 s /
   5 min, and polling as fallback.
 - **JSON Schemas** for every A2H message, in [`schemas/`](schemas/).
+- **MCP server** (`a2h mcp`): agents in Claude, Cursor and other MCP clients
+  ask you for approval as a tool.
 - **Conformance suite** to test any A2H gateway: `a2h conform`.
 
 ## Quick start
@@ -131,6 +133,55 @@ status, _ := c.Wait(ctx, sent.InteractionID, 2*time.Second)
 resp, err := c.VerifyResponse(ctx, status.Response, msg.MessageID) // checks responds_to and the JWS
 if err == nil && resp.Decision == a2h.Approve { /* go ahead */ }
 ```
+
+## Use it from AI agents (MCP)
+
+`a2h mcp` is a [Model Context Protocol](https://modelcontextprotocol.io)
+server: Claude Code, Claude Desktop, Cursor and other MCP clients get tools
+to ask you before acting.
+
+| Tool | What it does |
+|---|---|
+| `request_approval` | Ask you to approve or decline an action; returns the verified decision |
+| `ask_human` | Ask you to fill in a short form (text, numbers, dates, choices, yes/no) |
+| `notify_human` | Send you a message (progress, result, alert) |
+| `check_request` | Follow up on a request that is still waiting |
+| `cancel_request` | Withdraw a request that has not been answered |
+
+Claude Code:
+
+```sh
+claude mcp add a2h \
+  -e A2H_GATEWAY=https://a2h.example.com -e A2H_API_KEY=… -e A2H_TO=tg:123456789 \
+  -- a2h mcp
+```
+
+Claude Desktop (`claude_desktop_config.json`), Cursor and others:
+
+```json
+{
+  "mcpServers": {
+    "a2h": {
+      "command": "a2h",
+      "args": ["mcp"],
+      "env": { "A2H_GATEWAY": "https://a2h.example.com", "A2H_API_KEY": "…", "A2H_TO": "mailto:me@example.com" }
+    }
+  }
+}
+```
+
+Then tell the agent when to ask, e.g. *"ask me with request_approval before
+deleting anything or spending money"*.
+
+- **The recipient is configuration.** The model can write the question but
+  cannot choose whom it goes to, so an agent cannot message other people.
+- **Answers are verified** against the gateway's signature before the tool
+  reports a decision. An answer that fails verification is reported as a
+  failure, never as an approval.
+- **Long waits:** a tool call waits up to 10 minutes (`-max-wait`) and
+  sends progress notifications meanwhile. If the person has not answered by
+  then, the tool says so and the agent continues with `check_request`.
+- **High stakes:** `require_passkey: true` makes the approval need a passkey.
 
 ## Passkeys for high-stakes approvals
 

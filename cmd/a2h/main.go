@@ -23,6 +23,8 @@ import (
 	"github.com/AndreaAcanfora/a2h-gateway/channels"
 	"github.com/AndreaAcanfora/a2h-gateway/conformance"
 	"github.com/AndreaAcanfora/a2h-gateway/gateway"
+	"github.com/AndreaAcanfora/a2h-gateway/mcpserver"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 var version = "dev"
@@ -38,6 +40,7 @@ Client (A2H_GATEWAY and A2H_API_KEY, or -gateway and -key):
   a2h notify [flags] "message"      send an INFORM
   a2h status ID                     print an interaction's status
   a2h conform -to ADDRESS           test a gateway against the A2H spec
+  a2h mcp -to ADDRESS               MCP server (stdio) giving AI agents tools to ask you
 
 Run "a2h <command> -h" for flags. Gateway environment:
   A2H_BASE_URL     public URL people open (required), e.g. https://a2h.example.com
@@ -78,6 +81,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return cmdStatus(args[1:], stdout, stderr)
 	case "conform":
 		return cmdConform(args[1:], stdout, stderr)
+	case "mcp":
+		return cmdMCP(args[1:], stderr)
 	case "version", "-version", "--version":
 		fmt.Fprintf(stdout, "a2h %s (A2H protocol %s)\n", version, a2h.Version)
 		return 0
@@ -423,5 +428,33 @@ func cmdConform(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	fmt.Fprintln(stdout, "\nconforming to the agent-facing API of A2H 1.0")
+	return 0
+}
+
+func cmdMCP(args []string, stderr io.Writer) int {
+	fs := flag.NewFlagSet("mcp", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	c := addClientFlags(fs)
+	maxWait := fs.Duration("max-wait", 10*time.Minute, "longest a tool call blocks waiting for an answer")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if err := c.check(); err != nil {
+		fmt.Fprintln(stderr, "a2h:", err)
+		return 2
+	}
+	if c.agent == "a2h-cli" {
+		c.agent = "mcp:a2h"
+	}
+	server := mcpserver.New(a2h.NewClient(c.gateway, c.key), mcpserver.Config{
+		Channel: c.channel, Address: c.to, PrincipalID: c.principal, AgentID: c.agent, MaxWait: *maxWait, Version: version,
+	})
+	// stdout carries the protocol: anything else goes to stderr.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	if err := server.Run(ctx, &mcp.StdioTransport{}); err != nil && ctx.Err() == nil {
+		fmt.Fprintln(stderr, "a2h:", err)
+		return 1
+	}
 	return 0
 }
