@@ -1,0 +1,1 @@
+{ "type": "AUTHORIZE", "message_id": "m", "agent_id": "a", "principal_id": "p", "callback": { "url": "http://agent.example.com/hook", "secret": "s" } }

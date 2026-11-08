@@ -1,0 +1,1 @@
+{ "type": "RESPONSE", "responds_to": "msg-1", "interaction_id": "int-1", "status": "ANSWERED", "decided_at": "2026-01-19T12:05:00Z", "data": { "full_name": "Jane Doe", "slot": "Wed 9am" }, "evidence": { "factor": "otp.sms.v1", "proof": { "verified_at": "2026-01-19T12:05:00Z", "delivery_channel": "tel:+15551234567", "attempts": 1 } } }

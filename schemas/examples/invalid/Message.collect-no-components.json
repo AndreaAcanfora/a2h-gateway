@@ -1,0 +1,1 @@
+{ "type": "COLLECT", "message_id": "m", "agent_id": "a", "principal_id": "p", "render": { "body": "?" } }

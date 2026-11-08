@@ -1,0 +1,1 @@
+{ "type": "RESULT", "message_id": "m-res", "responds_to": "m-auth", "agent_id": "a", "principal_id": "p", "render": { "body": "Your purchase is complete. Order #12345." }, "params": { "status": "EXECUTED", "result_data": { "acp_order_id": "acp:order/xyz123", "tracking": "1Z..." } } }

@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - name: Test
+        if: runner.os == 'Linux'
+        run: go test -race -timeout 5m ./...
+      - name: Test
+        if: runner.os != 'Linux'
+        run: go test -timeout 5m ./...
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - name: staticcheck
+        run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+
+  passkeys:
+    name: passkeys in a real browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: go build -o e2e/a2h ./cmd/a2h
+      - working-directory: e2e
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+          npm test
+
+  conformance:
+    name: conformance of the binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Serve and run the suite
+        env:
+          A2H_BASE_URL: http://localhost:8080
+          A2H_API_KEYS: ci:ci-key-0123456789abcdef
+          A2H_CONSOLE: "1"
+          A2H_DATA_DIR: /tmp/a2h-data
+        run: |
+          go build -o a2h ./cmd/a2h
+          ./a2h serve &
+          sleep 2
+          ./a2h conform -gateway http://localhost:8080 -key ci-key-0123456789abcdef -to console:ci
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build --build-arg VERSION=ci -t a2h:ci .
+      - name: Smoke test
+        run: docker run --rm a2h:ci version

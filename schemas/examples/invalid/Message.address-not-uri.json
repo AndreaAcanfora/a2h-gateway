@@ -1,0 +1,1 @@
+{ "type": "AUTHORIZE", "message_id": "m", "agent_id": "a", "principal_id": "p", "channel": { "type": "sms", "address": "+15551234567" } }

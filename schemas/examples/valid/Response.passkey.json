@@ -1,0 +1,13 @@
+{
+  "type": "RESPONSE",
+  "responds_to": "msg-123",
+  "interaction_id": "int-456",
+  "status": "ANSWERED",
+  "decision": "APPROVE",
+  "decided_at": "2026-01-19T12:05:00Z",
+  "evidence": {
+    "factor": "passkey.webauthn.v1",
+    "proof": { "credentialId": "Y3JlZA", "clientDataJSON": "e30", "authenticatorData": "YXV0aA", "signature": "c2ln", "userHandle": "dXNlcg" }
+  },
+  "signature": "eyJhbGciOiJFUzI1NiJ9..c2lnbmF0dXJl"
+}

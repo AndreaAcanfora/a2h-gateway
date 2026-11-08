@@ -1,0 +1,23 @@
+{
+  "a2h_version": "1.0",
+  "a2h_min_version": "1.0",
+  "interaction_id": "01938a4e-7c1f-7b2a-9d3e-1f2a3b4c5d6e",
+  "type": "AUTHORIZE",
+  "message_id": "01938a4e-7c20-7c1d-8e2f-3a4b5c6d7e8f",
+  "agent_id": "did:web:agent.example.com",
+  "principal_id": "did:example:alice",
+  "channel": {
+    "type": "sms",
+    "address": "tel:+15551234567",
+    "nonce": "Zm9vYmFy",
+    "expires_at": "2026-01-15T17:05:00Z",
+    "render": { "title": "Short Title", "body": "Authorize agent to delete 3 unused files?" },
+    "fallback": [{ "type": "email", "address": "mailto:alice@example.com" }]
+  },
+  "links": { "acp_ref": "acp:order/xyz", "mcp_session": "mcp:session/456" },
+  "ttl_sec": 300,
+  "assurance": { "level": "HIGH", "required_factors": ["passkey.webauthn.v1", "otp.v1"] },
+  "explanation_bundle": { "why": "This action is irreversible." },
+  "callback": { "url": "https://agent.example.com/a2h/webhook", "secret": "whsec_abc123def456" },
+  "created_at": "2026-01-15T17:00:00Z"
+}

@@ -1,0 +1,280 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/AndreaAcanfora/a2h-gateway/master/schemas/a2h-1.0.schema.json",
+  "title": "A2H (Agent-to-Human) protocol 1.0 messages",
+  "description": "JSON Schemas for the A2H v1.0 specification by Twilio Labs (https://github.com/twilio-labs/Agent2Human), derived from a2h_framework.md and a2h-protocol.yaml. Use the definitions under $defs. Unknown members are allowed, as section 1.2 permits additional fields.",
+  "$defs": {
+    "Version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "Timestamp": { "type": "string", "format": "date-time" },
+    "DetachedJWS": {
+      "description": "Detached compact JWS (RFC 7515 appendix F) over the JCS form (RFC 8785) of the message without its signature member.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+\\.\\.[A-Za-z0-9_-]+$"
+    },
+    "URIAddress": {
+      "description": "Routable address with a URI scheme, e.g. tel:+15551234567 or mailto:alice@example.com (section 1.9).",
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:.+$"
+    },
+    "IntentType": { "enum": ["INFORM", "COLLECT", "AUTHORIZE", "ESCALATE", "RESULT"] },
+    "MessageType": { "enum": ["INFORM", "COLLECT", "AUTHORIZE", "ESCALATE", "RESULT", "RESPONSE", "ERROR"] },
+    "State": { "enum": ["PENDING", "SENT", "WAITING_INPUT", "ANSWERED", "EXPIRED", "CANCELLED", "FAILED"] },
+    "ErrorCode": {
+      "description": "The codes of section 1.3 and the OpenAPI ErrorCode enumeration. Gateways may add codes with the same ERR. prefix.",
+      "type": "string",
+      "pattern": "^ERR\\.[A-Z0-9_]+$"
+    },
+    "Render": {
+      "type": "object",
+      "required": ["body"],
+      "properties": {
+        "title": { "type": "string", "maxLength": 256 },
+        "body": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "footer": { "type": "string", "maxLength": 512 },
+        "icon": { "type": "string", "maxLength": 128 }
+      }
+    },
+    "Channel": {
+      "type": "object",
+      "required": ["type", "address"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "address": { "$ref": "#/$defs/URIAddress" },
+        "nonce": { "type": "string" },
+        "expires_at": { "$ref": "#/$defs/Timestamp" },
+        "render": { "$ref": "#/$defs/Render" },
+        "fallback": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "address"],
+            "properties": { "type": { "type": "string", "minLength": 1 }, "address": { "$ref": "#/$defs/URIAddress" } }
+          }
+        }
+      }
+    },
+    "Assurance": {
+      "type": "object",
+      "properties": {
+        "level": { "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "required_factors": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Callback": {
+      "type": "object",
+      "required": ["url", "secret"],
+      "properties": {
+        "url": { "type": "string", "format": "uri", "pattern": "^https://", "description": "Section 1.12.2: MUST use HTTPS." },
+        "secret": { "type": "string", "minLength": 1 }
+      }
+    },
+    "Component": {
+      "type": "object",
+      "required": ["type", "name"],
+      "properties": {
+        "type": { "enum": ["TEXT", "SELECT", "MULTISELECT", "CHECKBOX", "RADIO", "TEXTAREA", "NUMBER", "DATE", "TIME", "DATETIME"] },
+        "name": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "label": { "type": "string", "maxLength": 256 },
+        "required": { "type": "boolean" },
+        "validation": {
+          "type": "object",
+          "properties": {
+            "pattern": { "type": "string", "format": "regex" },
+            "min": { "type": "number" },
+            "max": { "type": "number" },
+            "minLength": { "type": "integer", "minimum": 0 },
+            "maxLength": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "options": {
+          "type": "array",
+          "items": { "type": "object", "required": ["value"], "properties": { "value": { "type": "string" }, "label": { "type": "string" } } }
+        }
+      },
+      "if": { "properties": { "type": { "enum": ["SELECT", "MULTISELECT", "RADIO"] } } },
+      "then": { "required": ["options"], "properties": { "options": { "minItems": 1 } } }
+    },
+    "Message": {
+      "title": "Intent sent by an agent (sections 1.2 and 1.3)",
+      "type": "object",
+      "required": ["type", "message_id", "agent_id", "principal_id"],
+      "properties": {
+        "a2h_version": { "$ref": "#/$defs/Version" },
+        "a2h_min_version": { "$ref": "#/$defs/Version" },
+        "interaction_id": { "type": "string", "minLength": 1 },
+        "type": { "$ref": "#/$defs/IntentType" },
+        "message_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "responds_to": { "type": "string" },
+        "agent_id": { "type": "string", "minLength": 1 },
+        "principal_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "profile": { "type": "string", "minLength": 1 },
+        "channel": { "$ref": "#/$defs/Channel" },
+        "render": { "$ref": "#/$defs/Render" },
+        "links": { "type": "object", "additionalProperties": { "type": "string" } },
+        "params": { "type": "object" },
+        "ttl_sec": { "type": "integer", "minimum": 30, "maximum": 86400 },
+        "assurance": { "$ref": "#/$defs/Assurance" },
+        "explanation_bundle": { "type": "object", "properties": { "why": { "type": "string" } } },
+        "callback": { "$ref": "#/$defs/Callback" },
+        "components": { "type": "array", "items": { "$ref": "#/$defs/Component" } },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "signature": { "$ref": "#/$defs/DetachedJWS" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "COLLECT" } } },
+          "then": { "required": ["components"], "properties": { "components": { "minItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "INFORM" } } },
+          "then": { "properties": { "params": { "properties": { "topic": { "enum": ["receipt", "progress", "alert", "result", "exception"] } } } } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "ESCALATE" } } },
+          "then": { "properties": { "params": { "properties": { "targets": { "type": "array", "items": { "type": "string" } } } } } }
+        }
+      ]
+    },
+    "Evidence": {
+      "type": "object",
+      "required": ["factor", "proof"],
+      "properties": {
+        "factor": { "type": "string", "minLength": 1 },
+        "proof": { "type": "object" }
+      },
+      "if": { "properties": { "factor": { "const": "passkey.webauthn.v1" } } },
+      "then": {
+        "properties": {
+          "proof": { "required": ["credentialId", "clientDataJSON", "authenticatorData", "signature"] }
+        }
+      }
+    },
+    "Response": {
+      "title": "RESPONSE: the person's answer, signed by the gateway (sections 1.3 and 1.11)",
+      "type": "object",
+      "required": ["type", "responds_to", "interaction_id", "status", "decided_at"],
+      "properties": {
+        "a2h_version": { "$ref": "#/$defs/Version" },
+        "type": { "const": "RESPONSE" },
+        "message_id": { "type": "string" },
+        "responds_to": { "type": "string", "minLength": 1 },
+        "interaction_id": { "type": "string", "minLength": 1 },
+        "principal_id": { "type": "string" },
+        "status": { "const": "ANSWERED" },
+        "decision": { "enum": ["APPROVE", "DECLINE"] },
+        "decided_at": { "$ref": "#/$defs/Timestamp" },
+        "data": { "type": "object" },
+        "evidence": { "$ref": "#/$defs/Evidence" },
+        "signature": { "$ref": "#/$defs/DetachedJWS" }
+      }
+    },
+    "ErrorInfo": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "$ref": "#/$defs/ErrorCode" },
+        "message": { "type": "string" },
+        "timestamp": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "ErrorMessage": {
+      "title": "ERROR message (section 1.3)",
+      "type": "object",
+      "required": ["type", "responds_to", "error"],
+      "properties": {
+        "type": { "const": "ERROR" },
+        "responds_to": { "type": "string", "minLength": 1 },
+        "interaction_id": { "type": "string" },
+        "error": { "$ref": "#/$defs/ErrorInfo" },
+        "timestamp": { "$ref": "#/$defs/Timestamp" },
+        "signature": { "$ref": "#/$defs/DetachedJWS" }
+      }
+    },
+    "ErrorResponse": {
+      "title": "HTTP error body (OpenAPI ErrorResponse)",
+      "type": "object",
+      "required": ["error", "message"],
+      "properties": {
+        "error": { "$ref": "#/$defs/ErrorCode" },
+        "message": { "type": "string" },
+        "details": { "type": "object" },
+        "retry_after_sec": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "IntentResponse": {
+      "title": "Answer of POST /v1/intent",
+      "type": "object",
+      "required": ["interaction_id", "state", "created_at", "ttl_sec"],
+      "properties": {
+        "interaction_id": { "type": "string", "minLength": 1 },
+        "state": { "$ref": "#/$defs/State" },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "ttl_sec": { "type": "integer" },
+        "channel_id": { "type": "string" },
+        "duplicate": { "type": "boolean" }
+      }
+    },
+    "InteractionStatus": {
+      "title": "Answer of GET /v1/status/{interactionId}",
+      "type": "object",
+      "required": ["interaction_id", "state", "created_at", "updated_at"],
+      "properties": {
+        "interaction_id": { "type": "string", "minLength": 1 },
+        "state": { "$ref": "#/$defs/State" },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" },
+        "response": { "$ref": "#/$defs/Response" },
+        "error": { "$ref": "#/$defs/ErrorInfo" },
+        "webhook_failed": { "type": "boolean" }
+      },
+      "if": { "properties": { "state": { "const": "ANSWERED" } } },
+      "then": { "required": ["response"] }
+    },
+    "Capabilities": {
+      "title": "Discovery document at /.well-known/a2h (section 1.4)",
+      "type": "object",
+      "required": ["a2h_supported", "channels", "factors"],
+      "properties": {
+        "a2h_supported": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/Version" } },
+        "channels": { "type": "array", "items": { "type": "string" } },
+        "factors": { "type": "array", "items": { "type": "string" } },
+        "max_ttl_sec": { "type": "integer", "minimum": 30 },
+        "locales": { "type": "array", "items": { "type": "string" } },
+        "jwks_uri": { "type": "string", "format": "uri" },
+        "quiet_hours": {
+          "type": "object",
+          "properties": {
+            "start": { "type": "string", "pattern": "^[0-2][0-9]:[0-5][0-9]$" },
+            "end": { "type": "string", "pattern": "^[0-2][0-9]:[0-5][0-9]$" },
+            "tz": { "type": "string" }
+          }
+        },
+        "limits": { "type": "object", "properties": { "max_single_usd": { "type": "number" }, "daily_usd": { "type": "number" } } },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "methods": { "type": "array", "items": { "enum": ["api_key", "oauth2", "mtls"] } },
+            "oauth2": { "type": "object", "properties": { "token_endpoint": { "type": "string", "format": "uri" } } }
+          }
+        },
+        "replay_protection": {
+          "type": "object",
+          "properties": {
+            "idempotency_window_sec": { "type": "integer", "minimum": 0 },
+            "timestamp_tolerance_sec": { "type": "integer", "minimum": 0 },
+            "nonce_endpoint": { "type": "string" }
+          }
+        },
+        "webhooks": {
+          "type": "object",
+          "properties": {
+            "supported": { "type": "boolean" },
+            "retry_attempts": { "type": "integer", "minimum": 0 },
+            "timeout_sec": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "profiles": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

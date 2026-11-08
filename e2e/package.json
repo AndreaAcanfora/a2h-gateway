@@ -1,0 +1,11 @@
+{
+  "name": "a2h-gateway-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node passkey.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.0"
+  }
+}

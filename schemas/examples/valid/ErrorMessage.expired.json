@@ -1,0 +1,1 @@
+{ "type": "ERROR", "responds_to": "msg-1", "error": { "code": "ERR.EXPIRED", "message": "Request expired before response received" }, "timestamp": "2026-01-15T17:10:00Z" }

@@ -1,0 +1,13 @@
+{
+  "a2h_supported": ["1.0"],
+  "channels": ["sms", "email", "push", "wallet", "voice", "chat"],
+  "factors": ["passkey.webauthn.v1", "push.v1", "otp.v1", "voice_ivr.v1", "email_link.v1"],
+  "max_ttl_sec": 1800,
+  "locales": ["en-US"],
+  "jwks_uri": "https://gateway.example.com/.well-known/jwks.json",
+  "quiet_hours": { "start": "22:00", "end": "07:00", "tz": "America/Denver" },
+  "limits": { "max_single_usd": 500, "daily_usd": 1500 },
+  "auth": { "methods": ["api_key", "oauth2"], "oauth2": { "token_endpoint": "https://gateway.example.com/oauth/token" } },
+  "replay_protection": { "idempotency_window_sec": 3600, "timestamp_tolerance_sec": 300, "nonce_endpoint": "/v1/nonce" },
+  "webhooks": { "supported": true, "retry_attempts": 3, "timeout_sec": 30 }
+}

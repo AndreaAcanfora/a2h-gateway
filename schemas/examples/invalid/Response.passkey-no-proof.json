@@ -1,0 +1,1 @@
+{ "type": "RESPONSE", "responds_to": "m", "interaction_id": "i", "status": "ANSWERED", "decided_at": "2026-01-19T12:05:00Z", "evidence": { "factor": "passkey.webauthn.v1", "proof": {} } }

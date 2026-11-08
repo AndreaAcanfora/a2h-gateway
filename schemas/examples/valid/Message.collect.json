@@ -1,0 +1,15 @@
+{
+  "type": "COLLECT",
+  "message_id": "msg-collect-1",
+  "agent_id": "did:web:agent.example.com",
+  "principal_id": "usr_abc123",
+  "render": { "body": "Please provide your info for the appointment." },
+  "ttl_sec": 900,
+  "components": [
+    { "type": "TEXT", "name": "full_name", "label": "Full Name" },
+    { "type": "SELECT", "name": "slot", "label": "Pick a time", "options": [
+      { "value": "tue_2pm", "label": "Tue 2pm" },
+      { "value": "wed_9am", "label": "Wed 9am" }
+    ]}
+  ]
+}
