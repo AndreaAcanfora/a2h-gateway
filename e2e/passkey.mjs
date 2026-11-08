@@ -119,7 +119,19 @@ try {
   assert.equal((await api('GET', `/v1/status/${b.id}`)).body.state, 'WAITING_INPUT')
   console.log('ok - a passkey assertion from one request is rejected for another')
 
-  // 5. Plain link approval of a HIGH request is refused.
+  // 5. A normal request is approved by clicking the form button (no passkey).
+  const plain = await api('POST', '/v1/intent', {
+    type: 'AUTHORIZE', message_id: crypto.randomUUID(), agent_id: 'did:web:e2e.invalid', principal_id: 'usr_alice',
+    channel: { type: 'push', address: topic }, render: { body: 'Archive last month\'s logs?' }, ttl_sec: 300,
+  })
+  for (let i = 0; i < 50 && (await api('GET', `/v1/status/${plain.body.interaction_id}`)).body.state !== 'WAITING_INPUT'; i++) await new Promise((r) => setTimeout(r, 100))
+  await page.goto(pushed.findLast((p) => p.topic === '/alice-e2e').click)
+  await page.click('button[value=APPROVE]')
+  await page.waitForFunction(() => document.body.textContent.includes('You approved this request'))
+  assert.equal((await api('GET', `/v1/status/${plain.body.interaction_id}`)).body.response.decision, 'APPROVE')
+  console.log('ok - approved by clicking the form in the browser')
+
+  // 6. Plain link approval of a HIGH request is refused.
   const form = await fetch(b.link, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'decision=APPROVE' })
   assert.equal(form.status, 422)
   assert.equal((await api('GET', `/v1/status/${b.id}`)).body.state, 'WAITING_INPUT')

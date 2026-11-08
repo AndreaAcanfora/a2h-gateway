@@ -91,10 +91,21 @@ func (g *Gateway) lookupLink(ctx context.Context, token string) (*interaction, *
 	return in, &m, nil
 }
 
-// sameOrigin rejects cross-site POSTs to the human pages.
+// sameOrigin rejects cross-site POSTs to the human pages. Browsers send
+// "Origin: null" in some cases (privacy settings, referrer policies), so a
+// null origin is accepted only when Sec-Fetch-Site confirms a same-origin request.
 func (g *Gateway) sameOrigin(r *http.Request) bool {
-	o := r.Header.Get("Origin")
-	return o == "" || o == g.origin
+	if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" && site != "none" {
+		return false
+	}
+	switch o := r.Header.Get("Origin"); o {
+	case "", g.origin:
+		return true
+	case "null":
+		return r.Header.Get("Sec-Fetch-Site") == "same-origin"
+	default:
+		return false
+	}
 }
 
 func (g *Gateway) handlePage(w http.ResponseWriter, r *http.Request) {

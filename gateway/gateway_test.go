@@ -312,20 +312,51 @@ func TestDecline(t *testing.T) {
 	}
 }
 
-func TestCrossOriginPostRefused(t *testing.T) {
-	e := newEnv(t)
-	e.send(e.intent())
-	e.tick()
-	req, _ := http.NewRequest("POST", e.email.last().ActionURL, strings.NewReader("decision=APPROVE"))
+// postAs sends a form POST with the headers a browser would set.
+func postAs(t *testing.T, link string, headers map[string]string) int {
+	t.Helper()
+	req, _ := http.NewRequest("POST", link, strings.NewReader("decision=APPROVE"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "https://evil.example")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	resp.Body.Close()
-	if resp.StatusCode != 403 {
-		t.Errorf("cross-origin POST: %d", resp.StatusCode)
+	return resp.StatusCode
+}
+
+func TestOriginChecks(t *testing.T) {
+	e := newEnv(t)
+	refused := []map[string]string{
+		{"Origin": "https://evil.example"},
+		{"Origin": "null", "Sec-Fetch-Site": "cross-site"},
+		{"Origin": "null"},
+		{"Sec-Fetch-Site": "cross-site"},
+		{"Origin": e.g.origin, "Sec-Fetch-Site": "same-site"},
+	}
+	e.send(e.intent())
+	e.tick()
+	link := e.email.last().ActionURL
+	for _, h := range refused {
+		if code := postAs(t, link, h); code != 403 {
+			t.Errorf("%v: %d, want 403", h, code)
+		}
+	}
+	// What browsers send for the gateway's own form, depending on policies.
+	accepted := []map[string]string{
+		{"Origin": e.g.origin, "Sec-Fetch-Site": "same-origin"},
+		{"Origin": "null", "Sec-Fetch-Site": "same-origin"},
+		{},
+	}
+	for _, h := range accepted {
+		e.send(e.intent())
+		e.tick()
+		if code := postAs(t, e.email.last().ActionURL, h); code != 200 {
+			t.Errorf("%v: %d, want 200", h, code)
+		}
 	}
 }
 
