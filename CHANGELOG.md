@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- MCP server (`a2h mcp`): tools `request_approval`, `ask_human`, `notify_human`, `check_request`, `cancel_request`.
+- Telegram: messages are delivered when the gateway URL is not public (link in the text).
+- `go install` builds report their module version.
+
 ## v0.1.0 — 2026-11-08
 
 - Fixed: approving from the form in a real browser returned 403 (Origin: null).
