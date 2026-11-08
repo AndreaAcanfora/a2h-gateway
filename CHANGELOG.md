@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.2.0 — 2026-11-08
 
 - MCP server (`a2h mcp`): tools `request_approval`, `ask_human`, `notify_human`, `check_request`, `cancel_request`.
 - Telegram: messages are delivered when the gateway URL is not public (link in the text).
