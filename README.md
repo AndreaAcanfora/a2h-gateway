@@ -46,6 +46,10 @@ gateway and formal JSON Schemas as next steps. This project is an
 
 ## Quick start
 
+Download a binary for Linux, macOS, Windows or FreeBSD from the
+[releases](https://github.com/AndreaAcanfora/a2h-gateway/releases), use the
+Docker image `ghcr.io/andreaacanfora/a2h-gateway`, or install with Go:
+
 ```sh
 go install github.com/AndreaAcanfora/a2h-gateway/cmd/a2h@latest
 
@@ -65,14 +69,13 @@ approve, and `a2h ask` exits with 0.
 ### In production
 
 ```sh
-docker build -t a2h-gateway .
 docker run -d -p 8080:8080 -v a2h-data:/data \
   -e A2H_BASE_URL=https://a2h.example.com \
   -e A2H_API_KEYS="deploy-bot:$(openssl rand -hex 24)" \
   -e SMTP_HOST=smtp.example.com -e SMTP_USERNAME=a2h@example.com -e SMTP_PASSWORD=… \
   -e TELEGRAM_BOT_TOKEN=123456:ABC… \
   -e A2H_PUSH=1 \
-  a2h-gateway
+  ghcr.io/andreaacanfora/a2h-gateway
 ```
 
 Put it behind HTTPS: people open its links, and passkeys only work on a

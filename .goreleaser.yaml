@@ -1,0 +1,19 @@
+version: 2
+builds:
+  - main: ./cmd/a2h
+    binary: a2h
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags: ["-s -w -X main.version={{.Version}}"]
+    goos: [linux, darwin, windows, freebsd]
+    goarch: [amd64, arm64]
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files: [LICENSE, README.md, docs/implementation-notes.md]
+checksum:
+  name_template: checksums.txt
+changelog:
+  use: github
