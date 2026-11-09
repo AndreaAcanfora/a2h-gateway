@@ -19,6 +19,9 @@ type pageData struct {
 	Enroll                                           bool
 	Principal                                        string
 	PasskeyCount                                     int
+	Pair                                             bool
+	PairLink                                         string
+	PairQR                                           template.HTML
 }
 
 func (g *Gateway) renderPage(w http.ResponseWriter, status int, d pageData) {
@@ -67,12 +70,20 @@ var pageTemplate = template.Must(template.New("page").Funcs(template.FuncMap{
   .choice { font-weight: normal; margin-top: .25rem; }
   .problem { color: var(--bad); font-size: .9rem; }
   .notice { font-weight: 600; }
+  .qr svg { width: 15rem; height: 15rem; display: block; margin: 1rem auto; background: white; padding: .75rem; border-radius: .5rem; }
+  .link { font-family: ui-monospace, monospace; font-size: .8rem; word-break: break-all; }
 </style>
 </head>
 <body>
 <main class="card">
 <h1>{{.Heading}}</h1>
-{{if .Enroll}}
+{{if .Pair}}
+  <p>Pair a phone app (such as <a href="https://github.com/AndreaAcanfora/nod">nod</a>) with <strong>{{.Principal}}</strong>: requests from your agents will arrive on the phone, and you answer them there.</p>
+  <p>In the app, tap <em>Pair a gateway</em> and scan this code:</p>
+  <div class="qr">{{.PairQR}}</div>
+  <p class="meta">Or paste this link in the app. It works once; anyone who has it can pair a phone in your name, so do not share it.</p>
+  <p class="link">{{.PairLink}}</p>
+{{else if .Enroll}}
   <p>Create a passkey for <strong>{{.Principal}}</strong>. You will use it to approve sensitive requests from your agents.</p>
   {{if .PasskeyCount}}<p class="meta">You already have {{.PasskeyCount}} passkey(s). This adds another one.</p>{{end}}
   <div class="actions"><button class="primary" id="enroll">Create passkey</button></div>

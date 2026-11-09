@@ -117,7 +117,9 @@ func (g *Gateway) deliver(ctx context.Context, j job) {
 	now := g.cfg.Now()
 	n := g.notification(in, &m, t, now)
 	err = errors.New("channel not configured")
-	if ch, ok := g.channels[t.Type]; ok {
+	if t.Type == AppChannel {
+		err = g.deliverApp(ctx, &m, t)
+	} else if ch, ok := g.channels[t.Type]; ok {
 		dctx, cancel := context.WithTimeout(ctx, time.Minute)
 		err = ch.Deliver(dctx, n)
 		cancel()
@@ -126,7 +128,7 @@ func (g *Gateway) deliver(ctx context.Context, j job) {
 		g.delivered(ctx, in, &m, t, now)
 		return
 	}
-	permanent := channels.IsPermanent(err) || g.channels[t.Type] == nil
+	permanent := channels.IsPermanent(err) || (g.channels[t.Type] == nil && t.Type != AppChannel)
 	g.log.Warn("delivery failed", "interaction", in.ID, "channel", t.Type, "attempt", j.Attempt, "permanent", permanent, "err", err)
 	next := job{Kind: "deliver", InteractionID: in.ID}
 	switch {

@@ -179,7 +179,7 @@ func TestDiscoveryAndJWKS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if caps.A2HSupported[0] != "1.0" || strings.Join(caps.Channels, ",") != "email,push" || caps.JWKSURI != e.g.cfg.BaseURL+"/.well-known/jwks.json" {
+	if caps.A2HSupported[0] != "1.0" || strings.Join(caps.Channels, ",") != "app,email,push" || caps.JWKSURI != e.g.cfg.BaseURL+"/.well-known/jwks.json" {
 		t.Errorf("capabilities %+v", caps)
 	}
 	conforms(t, "Capabilities", caps)

@@ -229,3 +229,31 @@ func VerifyDetached(message []byte, compact string, keys JWKS) error {
 	}
 	return nil
 }
+
+// VerifyCompact checks an attached compact JWS ("header.payload.signature",
+// ES256) against key and returns its header and payload.
+func VerifyCompact(compact string, key *ecdsa.PublicKey) (hdr, payload []byte, err error) {
+	parts := strings.Split(compact, ".")
+	if len(parts) != 3 || parts[1] == "" {
+		return nil, nil, errors.New("jws: not a compact JWS")
+	}
+	if hdr, err = b64.DecodeString(parts[0]); err != nil {
+		return nil, nil, ErrInvalid
+	}
+	var h header
+	if err := json.Unmarshal(hdr, &h); err != nil || h.Alg != "ES256" {
+		return nil, nil, fmt.Errorf("jws: unsupported header %s", hdr)
+	}
+	if payload, err = b64.DecodeString(parts[1]); err != nil {
+		return nil, nil, ErrInvalid
+	}
+	sig, err := b64.DecodeString(parts[2])
+	if err != nil || len(sig) != 64 {
+		return nil, nil, ErrInvalid
+	}
+	digest := sha256.Sum256([]byte(parts[0] + "." + parts[1]))
+	if !ecdsa.Verify(key, digest[:], new(big.Int).SetBytes(sig[:32]), new(big.Int).SetBytes(sig[32:])) {
+		return nil, nil, ErrInvalid
+	}
+	return hdr, payload, nil
+}

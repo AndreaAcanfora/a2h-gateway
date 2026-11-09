@@ -142,6 +142,7 @@ var channelSchemes = map[string][]string{
 	"push":     {"https", "http"},
 	"telegram": {"tg"},
 	"console":  {"console"},
+	"app":      {"app"},
 }
 
 func validateChannel(typ, address, field string, l Limits) *APIError {

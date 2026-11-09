@@ -239,13 +239,20 @@ func (g *Gateway) routes() {
 	m.HandleFunc("GET /enroll/{token}", g.handleEnrollPage)
 	m.HandleFunc("POST /enroll/{token}/options", g.handleEnrollOptions)
 	m.HandleFunc("POST /enroll/{token}/verify", g.handleEnrollVerify)
+	m.HandleFunc("GET /pair/{token}", g.handlePairPage)
+	m.HandleFunc("POST /v1/device/pair", g.handlePair)
+	m.HandleFunc("GET /v1/device", g.deviceAPI(g.handleDevice))
+	m.HandleFunc("PATCH /v1/device", g.deviceAPI(g.handleDeviceUpdate))
+	m.HandleFunc("DELETE /v1/device", g.deviceAPI(g.handleUnpair))
+	m.HandleFunc("GET /v1/device/inbox", g.deviceAPI(g.handleInbox))
+	m.HandleFunc("POST /v1/device/answer", g.deviceAPI(g.handleDeviceAnswer))
 	m.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, "ok\n") })
 	g.mux = m
 }
 
 // Capabilities returns the discovery document.
 func (g *Gateway) Capabilities() a2h.Capabilities {
-	chans := make([]string, 0, len(g.channels))
+	chans := []string{AppChannel}
 	for t := range g.channels {
 		chans = append(chans, t)
 	}
@@ -257,7 +264,7 @@ func (g *Gateway) Capabilities() a2h.Capabilities {
 	return a2h.Capabilities{
 		A2HSupported: []string{a2h.Version},
 		Channels:     chans,
-		Factors:      []string{a2h.FactorPasskey, a2h.FactorEmailLink, a2h.FactorLink},
+		Factors:      []string{a2h.FactorPasskey, a2h.FactorDeviceKey, a2h.FactorEmailLink, a2h.FactorLink},
 		MaxTTLSec:    g.cfg.MaxTTLSec,
 		Locales:      []string{"en"},
 		JWKSURI:      g.cfg.BaseURL + "/.well-known/jwks.json",

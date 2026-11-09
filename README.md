@@ -28,8 +28,9 @@ gateway and formal JSON Schemas as next steps. This project is an
 - **All intents:** AUTHORIZE (approve or decline), COLLECT (forms with text,
   choices, numbers and dates, validated), INFORM, RESULT, ESCALATE.
 - **Channels:** email (SMTP), Telegram bot, push via [ntfy](https://ntfy.sh)
-  (self-hosted or ntfy.sh), plus a console channel for development. Retries
-  with the spec's backoff, and fallback channels.
+  (self-hosted or ntfy.sh), a **phone app** paired with a QR code (`app`),
+  plus a console channel for development. Retries with the spec's backoff,
+  and fallback channels.
 - **Proof of decision:**
   - every RESPONSE is signed (ES256 detached JWS over JCS, keys in the JWKS);
   - requests with `assurance.level: HIGH` must be approved with a **passkey**
@@ -202,6 +203,23 @@ a2h enroll -principal usr_alice
 
 The RESPONSE then carries the WebAuthn assertion, the challenge nonce and the
 public key, so an agent can verify the person's signature itself.
+
+## Answer from your phone
+
+Pair a phone app such as [nod](https://github.com/AndreaAcanfora/nod) and
+requests arrive there: approve or decline with your fingerprint or face, fill
+in forms, see what you decided. The app signs each answer with a key that never
+leaves the phone, and the signature travels in the RESPONSE.
+
+```sh
+a2h pair -principal usr_alice      # shows a QR code to scan in the app
+a2h ask -to app:usr_alice "Deploy v2.3 to production?"
+```
+
+The push that wakes the app carries no content (it goes through
+[UnifiedPush](https://unifiedpush.org), for example ntfy, with no Google
+services needed). [docs/app-api.md](docs/app-api.md) describes the API, for
+anyone writing another app.
 
 ## Conformance
 

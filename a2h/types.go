@@ -61,6 +61,9 @@ const (
 	FactorPasskey   = "passkey.webauthn.v1"
 	FactorEmailLink = "email_link.v1"
 	FactorLink      = "link.v1"
+	// FactorDeviceKey is an answer signed by a key that lives on a paired
+	// phone app (an extension of this gateway, not in the A2H spec).
+	FactorDeviceKey = "device_key.es256.v1"
 )
 
 // Message is the common envelope of every A2H message (spec section 1.2).
