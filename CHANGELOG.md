@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.3.0 — 2026-11-09
 
 - App channel (`app:<principal>`): pair a phone app with `a2h pair` (QR code), and answers are signed by a key on the phone (factor `device_key.es256.v1`). API in docs/app-api.md.
 - `a2h devices` lists and unpairs phones.
