@@ -34,6 +34,8 @@ const usage = `a2h — Agent-to-Human (A2H) gateway and client
 Gateway:
   a2h serve                         run the gateway (configured by environment, see below)
   a2h enroll -principal ID          print a link where a person creates a passkey
+  a2h pair -principal ID            print a QR code that pairs a phone app (channel "app")
+  a2h devices [-revoke DEVICE_ID]   list paired phones, or unpair one
 
 Client (A2H_GATEWAY and A2H_API_KEY, or -gateway and -key):
   a2h ask [flags] "question"        ask for approval; exit 0 approved, 1 declined, 2 no answer
@@ -73,6 +75,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return cmdServe(args[1:], stderr)
 	case "enroll":
 		return cmdEnroll(args[1:], stdout, stderr)
+	case "pair":
+		return cmdPair(args[1:], stdout, stderr)
+	case "devices":
+		return cmdDevices(args[1:], stdout, stderr)
 	case "ask":
 		return cmdAsk(args[1:], stdout, stderr)
 	case "notify":
@@ -135,9 +141,7 @@ func gatewayConfig(log *slog.Logger) (gateway.Config, error) {
 	if dev || os.Getenv("A2H_CONSOLE") == "1" {
 		cfg.Channels = append(cfg.Channels, channels.Console{Log: log})
 	}
-	if len(cfg.Channels) == 0 {
-		return cfg, errors.New("no channel configured: set SMTP_HOST, TELEGRAM_BOT_TOKEN, A2H_PUSH=1 or A2H_CONSOLE=1")
-	}
+	// The app channel (phones paired with "a2h pair") needs no configuration.
 	return cfg, nil
 }
 
@@ -194,15 +198,9 @@ func cmdEnroll(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "usage: a2h enroll -principal ID")
 		return 2
 	}
-	cfg, err := gatewayConfig(slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err != nil {
-		fmt.Fprintln(stderr, "a2h:", err)
-		return 2
-	}
-	g, err := gateway.New(cfg)
-	if err != nil {
-		fmt.Fprintln(stderr, "a2h:", err)
-		return 1
+	g, code := openGateway(stderr)
+	if g == nil {
+		return code
 	}
 	defer g.Close()
 	link, err := g.CreateEnrollment(context.Background(), *principal, *ttl)
@@ -212,6 +210,98 @@ func cmdEnroll(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stderr, "Send this link to %s. It works once and expires in %s:\n", *principal, *ttl)
 	fmt.Fprintln(stdout, link)
+	return 0
+}
+
+// openGateway opens the gateway's state for operator commands.
+func openGateway(stderr io.Writer) (*gateway.Gateway, int) {
+	cfg, err := gatewayConfig(slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		fmt.Fprintln(stderr, "a2h:", err)
+		return nil, 2
+	}
+	g, err := gateway.New(cfg)
+	if err != nil {
+		fmt.Fprintln(stderr, "a2h:", err)
+		return nil, 1
+	}
+	return g, 0
+}
+
+func cmdPair(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("pair", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	principal := fs.String("principal", "", "principal ID, as agents use it in principal_id")
+	ttl := fs.Duration("ttl", time.Hour, "validity of the pairing link")
+	noQR := fs.Bool("no-qr", false, "print only the link")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if *principal == "" {
+		fmt.Fprintln(stderr, "usage: a2h pair -principal ID")
+		return 2
+	}
+	g, code := openGateway(stderr)
+	if g == nil {
+		return code
+	}
+	defer g.Close()
+	link, err := g.CreatePairing(context.Background(), *principal, *ttl)
+	if err != nil {
+		fmt.Fprintln(stderr, "a2h:", err)
+		return 1
+	}
+	if !*noQR {
+		fmt.Fprint(stderr, gateway.QRText(link))
+	}
+	fmt.Fprintf(stderr, "Scan the code, or paste the link, in the phone app of %s. It works once and expires in %s.\nAgents then reach this phone with the address app:%s.\n", *principal, *ttl, *principal)
+	fmt.Fprintln(stdout, link)
+	return 0
+}
+
+func cmdDevices(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("devices", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	principal := fs.String("principal", "", "only the phones of this principal")
+	revoke := fs.String("revoke", "", "unpair the device with this ID")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	g, code := openGateway(stderr)
+	if g == nil {
+		return code
+	}
+	defer g.Close()
+	ctx := context.Background()
+	if *revoke != "" {
+		ok, err := g.RevokeDevice(ctx, *revoke)
+		if err != nil {
+			fmt.Fprintln(stderr, "a2h:", err)
+			return 1
+		}
+		if !ok {
+			fmt.Fprintf(stderr, "a2h: no device %q\n", *revoke)
+			return 1
+		}
+		fmt.Fprintf(stdout, "unpaired %s\n", *revoke)
+		return 0
+	}
+	devices, err := g.Devices(ctx, *principal)
+	if err != nil {
+		fmt.Fprintln(stderr, "a2h:", err)
+		return 1
+	}
+	if len(devices) == 0 {
+		fmt.Fprintln(stderr, "no paired phones; pair one with: a2h pair -principal ID")
+		return 0
+	}
+	for _, d := range devices {
+		push := "no push"
+		if d.Push {
+			push = "push"
+		}
+		fmt.Fprintf(stdout, "%s\t%s\t%s\t%s\tlast seen %s\n", d.ID, d.PrincipalID, d.Name, push, d.LastSeenAt.Format(time.RFC3339))
+	}
 	return 0
 }
 
@@ -247,11 +337,16 @@ func (c *clientFlags) check() error {
 			c.channel = "push"
 		case "console":
 			c.channel = "console"
+		case "app":
+			c.channel = "app"
 		default:
 			return fmt.Errorf("cannot guess the channel of %q: use -channel", c.to)
 		}
 	}
-	if c.principal == "" {
+	if c.principal == "" && c.channel == "app" {
+		// An app address names the principal the phone was paired with.
+		c.principal = strings.TrimPrefix(c.to, "app:")
+	} else if c.principal == "" {
 		c.principal = "principal-" + c.to
 	}
 	return nil

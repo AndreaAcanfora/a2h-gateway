@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- App channel (`app:<principal>`): pair a phone app with `a2h pair` (QR code), and answers are signed by a key on the phone (factor `device_key.es256.v1`). API in docs/app-api.md.
+- `a2h devices` lists and unpairs phones.
+- The gateway starts without any configured channel (the app channel needs no configuration).
+
 ## v0.2.1 — 2026-11-08
 
 - Listed in the official MCP Registry as `io.github.AndreaAcanfora/a2h-gateway` (`server.json`, ownership label on the image, published by the release workflow).

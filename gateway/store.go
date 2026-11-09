@@ -72,6 +72,24 @@ CREATE TABLE IF NOT EXISTS enrollments (
 	expires_at   INTEGER NOT NULL,
 	used         INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS pairings (
+	token_hash   TEXT PRIMARY KEY,
+	principal_id TEXT NOT NULL,
+	expires_at   INTEGER NOT NULL,
+	used         INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS devices (
+	id           TEXT PRIMARY KEY,
+	principal_id TEXT NOT NULL,
+	name         TEXT NOT NULL,
+	public_key   TEXT NOT NULL,
+	token_hash   TEXT NOT NULL UNIQUE,
+	push_url     TEXT NOT NULL DEFAULT '',
+	created_at   INTEGER NOT NULL,
+	last_seen_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS devices_principal ON devices(principal_id);
+CREATE INDEX IF NOT EXISTS interactions_principal ON interactions(principal_id, created_at);
 CREATE TABLE IF NOT EXISTS sessions (
 	key        TEXT PRIMARY KEY,
 	data       TEXT NOT NULL,
@@ -242,6 +260,7 @@ func (s *Store) cleanup(ctx context.Context, now time.Time, idempotencyWindow ti
 		{`DELETE FROM nonces WHERE expires_at < ?`, ms(now.Add(-time.Hour))},
 		{`DELETE FROM sessions WHERE expires_at < ?`, ms(now)},
 		{`DELETE FROM enrollments WHERE expires_at < ?`, ms(now.Add(-24 * time.Hour))},
+		{`DELETE FROM pairings WHERE expires_at < ?`, ms(now.Add(-24 * time.Hour))},
 	}
 	for _, st := range stmts {
 		if _, err := s.db.ExecContext(ctx, st.q, st.arg); err != nil {
